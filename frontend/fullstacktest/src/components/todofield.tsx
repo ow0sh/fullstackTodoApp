@@ -2,13 +2,15 @@
 import { Todo } from '@/interfaces';
 import { useState } from 'react';
 import Checkbox from './checkbox';
+import { useAppDispatch } from '@/hooks';
+import { deletetodo } from '@/slices/tododataslice';
 
 interface TodoListParams {
   todos: Todo[];
 }
 
 export default function TodoList({ todos }: TodoListParams) {
-  if (todos.length == 0) {
+  if (!todos) {
     return (
       <div className="mt-[20px] bg-gray-200 rounded-md min-h-[80px] flex justify-center">
         <div className="bg-stone-400 text-gray-700 w-32 h-8 flex justify-center rounded-lg my-auto">
@@ -22,10 +24,10 @@ export default function TodoList({ todos }: TodoListParams) {
       {todos.map((todo) => {
         return (
           <Todo
-            key={todo.id}
-            text={todo.text}
-            status={todo.status}
-            id={todo.id}
+            key={todo.ID}
+            Text={todo.Text}
+            Status={todo.Status}
+            ID={todo.ID}
           />
         );
       })}
@@ -33,8 +35,9 @@ export default function TodoList({ todos }: TodoListParams) {
   );
 }
 
-function Todo({ text, status, id }: Todo) {
-  const [checked, setChecked] = useState<boolean>(status);
+function Todo({ Text, Status, ID }: Todo) {
+  const [checked, setChecked] = useState<boolean>(Status);
+  const dispatch = useAppDispatch();
   return (
     <div className="px-5 pb-5">
       <div className="bg-white rounded-sm h-10 select-none flex justify-between">
@@ -48,14 +51,17 @@ function Todo({ text, status, id }: Todo) {
             <Checkbox checked={checked} />
           </div>
           {checked ? (
-            <span className="my-auto line-through">{text}</span>
+            <span className="my-auto line-through">{Text}</span>
           ) : (
-            <span className="my-auto">{text}</span>
+            <span className="my-auto">{Text}</span>
           )}
         </div>
         <div className="flex my-auto mr-2">
           <div className="w-[25px] h-[25px]">
             <svg
+              onClick={() => {
+                dispatch(deletetodo(ID));
+              }}
               fill="currentColor"
               viewBox="0 0 16 16"
               className="bg-gray-300 hover:bg-gray-200 text-gray-500 p-1"

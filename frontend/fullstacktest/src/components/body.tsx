@@ -2,10 +2,25 @@
 import { useState } from 'react';
 import Button from './button';
 
+import { useAppDispatch } from '@/hooks';
+import { setStatus } from '@/slices/modalslice';
+
 export default function Body() {
+  const dispatch = useAppDispatch();
+
+  const handlerClick = () => {
+    dispatch(setStatus(true));
+  };
+
   return (
     <div className="flex justify-between">
-      <Button text="Add Task" bgcolor="bg-blue-700" textcolor="text-white" />
+      <Button
+        onClick={() => handlerClick()}
+        hovercolor="hover:bg-blue-400"
+        text="Add Task"
+        bgcolor="bg-blue-700"
+        textcolor="text-white"
+      />
       <Filter options={['ALL', 'Complete', 'Incomplete']} />
     </div>
   );
