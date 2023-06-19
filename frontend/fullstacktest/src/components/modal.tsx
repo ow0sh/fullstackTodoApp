@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Button from './button';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch } from '@/hooks';
 
 import { setStatus } from '@/slices/modalslice';
 import { addTodo } from '@/slices/tododataslice';
@@ -9,8 +9,6 @@ import { Todo } from '@/interfaces';
 
 export default function Modal() {
   const [value, setValue] = useState<string>('');
-
-  const lastid = useAppSelector((state) => state.id.lastId);
   const dispatch = useAppDispatch();
 
   const handlerClick = (type: number) => {
