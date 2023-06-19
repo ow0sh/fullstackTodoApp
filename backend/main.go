@@ -42,6 +42,8 @@ func main() {
 		r.Post("/inserttodo", handler.InsertTodo(PSQLConn, log))
 		r.Get("/gettodos", handler.GetTodos(PSQLConn, log))
 		r.Delete("/deletetodo", handler.DeleteTodo(PSQLConn, log))
+		r.Post("/switchstatus", handler.SwitchStatus(PSQLConn, log))
+		r.Post("/updatetext", handler.UpdateText(PSQLConn, log))
 	})
 
 	if err := http.ListenAndServe(config.App.Port, r); err != nil {

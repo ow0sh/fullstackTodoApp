@@ -1,15 +1,41 @@
 'use client';
 import { Todo } from '@/interfaces';
-import { useState } from 'react';
 import Checkbox from './checkbox';
-import { useAppDispatch } from '@/hooks';
-import { deletetodo } from '@/slices/tododataslice';
+import { useAppDispatch, useAppSelector } from '@/hooks';
+import { deletetodo, switchStatus, updateText } from '@/slices/tododataslice';
+import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 
 interface TodoListParams {
   todos: Todo[];
 }
 
 export default function TodoList({ todos }: TodoListParams) {
+  const [copyTodos, setCopyTodos] = useState<Todo[]>(todos);
+  const type = useAppSelector((state) => state.filter.type);
+
+  useEffect(() => {
+    console.log(type);
+    switch (type) {
+      case 'ALL':
+        setCopyTodos(todos);
+        break;
+      case 'Complete':
+        setCopyTodos(
+          todos.filter((element) => {
+            return element.Status;
+          })
+        );
+        break;
+      case 'Incomplete':
+        setCopyTodos(
+          todos.filter((element) => {
+            return !element.Status;
+          })
+        );
+        break;
+    }
+  }, [type, todos]);
+
   if (!todos) {
     return (
       <div className="mt-[20px] bg-gray-200 rounded-md min-h-[80px] flex justify-center">
@@ -21,7 +47,7 @@ export default function TodoList({ todos }: TodoListParams) {
   }
   return (
     <div className="mt-[20px] bg-gray-200 rounded-md min-h-[70px] pt-5">
-      {todos.map((todo) => {
+      {copyTodos.map((todo) => {
         return (
           <Todo
             key={todo.ID}
@@ -36,8 +62,25 @@ export default function TodoList({ todos }: TodoListParams) {
 }
 
 function Todo({ Text, Status, ID }: Todo) {
-  const [checked, setChecked] = useState<boolean>(Status);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const dispatch = useAppDispatch();
+
+  const UpdateTextHandler = () => {
+    if (!textareaRef.current) {
+      return;
+    }
+    textareaRef.current.disabled = false;
+    textareaRef.current.focus();
+  };
+
+  const onKeyDownHandler = (e: KeyboardEvent) => {
+    if (e.key == 'Enter' && textareaRef.current) {
+      dispatch(updateText({ ID: ID, Text: textareaRef.current.value }));
+      textareaRef.current.disabled = true;
+    }
+  };
+
   return (
     <div className="px-5 pb-5">
       <div className="bg-white rounded-sm h-10 select-none flex justify-between">
@@ -45,15 +88,27 @@ function Todo({ Text, Status, ID }: Todo) {
           <div
             className="my-auto ml-2 mr-2"
             onClick={() => {
-              setChecked((prev) => !prev);
+              dispatch(switchStatus(ID));
             }}
           >
-            <Checkbox checked={checked} />
+            <Checkbox checked={Status} />
           </div>
-          {checked ? (
-            <span className="my-auto line-through">{Text}</span>
+          {Status ? (
+            <textarea
+              onKeyDown={(e) => onKeyDownHandler(e)}
+              ref={textareaRef}
+              disabled={true}
+              defaultValue={Text}
+              className="my-auto line-through h-5 resize-none overflow-hidden outline-none"
+            />
           ) : (
-            <span className="my-auto">{Text}</span>
+            <textarea
+              onKeyDown={(e) => onKeyDownHandler(e)}
+              defaultValue={Text}
+              ref={textareaRef}
+              disabled={true}
+              className="my-auto resize-none h-5 overflow-hidden outline-none"
+            />
           )}
         </div>
         <div className="flex my-auto mr-2">
@@ -69,7 +124,10 @@ function Todo({ Text, Status, ID }: Todo) {
               <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5zm3 4a.5.5 0 01.5.5v7a.5.5 0 01-1 0v-7a.5.5 0 01.5-.5zM8 5a.5.5 0 01.5.5v7a.5.5 0 01-1 0v-7A.5.5 0 018 5zm3 .5v7a.5.5 0 01-1 0v-7a.5.5 0 011 0z" />
             </svg>
           </div>
-          <div className="w-[25px] h-[25px] ml-[10px]">
+          <div
+            className="w-[25px] h-[25px] ml-[10px]"
+            onClick={() => UpdateTextHandler()}
+          >
             <svg
               viewBox="0 0 24 24"
               fill="currentColor"

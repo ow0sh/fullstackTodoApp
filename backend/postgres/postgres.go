@@ -98,3 +98,35 @@ func (conn *PSQLConn) DeleteTodo(id int) error {
 	}
 	return nil
 }
+
+func (conn *PSQLConn) SwitchStatus(id int) error {
+	var status bool
+	selectStr := `SELECT status FROM todos WHERE id=$1;`
+	err := conn.conn.QueryRow(context.Background(), selectStr, id).Scan(&status)
+	if err != nil {
+		return errors.Wrap(err, "failed to select the status")
+	}
+
+	switchStr := `UPDATE todos SET status=$1 WHERE id=$2;`
+	_, err = conn.conn.Exec(context.Background(), switchStr, !status, id)
+	if err != nil {
+		return errors.Wrap(err, "failed to switch todo")
+	}
+	return nil
+}
+
+func (conn *PSQLConn) UpdateText(id int, text string) error {
+	var textstr string
+	selectStr := `SELECT text FROM todos WHERE id=$1;`
+	err := conn.conn.QueryRow(context.Background(), selectStr, id).Scan(&textstr)
+	if err != nil {
+		return errors.Wrap(err, "failed to select the old text")
+	}
+
+	updateStr := `UPDATE todos SET text=$1 WHERE id=$2;`
+	_, err = conn.conn.Exec(context.Background(), updateStr, text, id)
+	if err != nil {
+		return errors.Wrap(err, "failed to update text in todo")
+	}
+	return nil
+}

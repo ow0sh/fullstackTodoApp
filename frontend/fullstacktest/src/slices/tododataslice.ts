@@ -7,6 +7,11 @@ interface InitialState {
   data: Todo[];
 }
 
+interface ParamsForTextUpdate {
+  ID: number;
+  Text: string;
+}
+
 const initialState = { data: [] } as InitialState;
 
 export const todoDataSlice = createSlice({
@@ -44,12 +49,47 @@ export const todoDataSlice = createSlice({
       let tmp = state.data.slice();
       state.data = tmp.filter((element) => element.ID != action.payload);
     },
+    switchStatus: (state, action: PayloadAction<number>) => {
+      fetch('http://localhost:3001/api/switchstatus', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(action.payload),
+      });
+
+      let tmp = state.data.slice();
+      tmp.forEach((element) => {
+        if (element.ID == action.payload) {
+          element.Status = !element.Status;
+        }
+      });
+      state.data = tmp;
+    },
+    updateText: (state, action: PayloadAction<ParamsForTextUpdate>) => {
+      fetch('http://localhost:3001/api/updatetext', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(action.payload),
+      });
+
+      let tmp = state.data.slice();
+      tmp.forEach((element) => {
+        if (element.ID == action.payload.ID) {
+          element.Text = action.payload.Text;
+        }
+      });
+      state.data = tmp;
+    },
     fetchData: (state, action: PayloadAction<Todo[]>) => {
       state.data = action.payload;
     },
   },
 });
 
-export const { addTodo, deletetodo, fetchData } = todoDataSlice.actions;
+export const { addTodo, deletetodo, switchStatus, updateText, fetchData } =
+  todoDataSlice.actions;
 export const selectTodoData = (state: RootState) => state.todo;
 export default todoDataSlice.reducer;

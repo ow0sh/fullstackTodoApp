@@ -90,3 +90,52 @@ func (h *handler) DeleteTodo(conn *postgres.PSQLConn, log *logrus.Logger) func(w
 		w.Write([]byte("todo deleted successfully"))
 	}
 }
+
+func (h *handler) SwitchStatus(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var id int
+		err := json.NewDecoder(r.Body).Decode(&id)
+		if err != nil {
+			log.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		log.Info(fmt.Sprintf("ID to switch recieved: id=%v", id))
+
+		err = conn.SwitchStatus(id)
+		if err != nil {
+			log.Error(err)
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("todo switched successfully"))
+	}
+}
+
+type UpdateTextRequest struct {
+	ID   int
+	Text string
+}
+
+func (h *handler) UpdateText(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var request UpdateTextRequest
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			log.Error(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		log.Info(fmt.Sprintf("ID and text to updatetext recieved: id=%v", request.ID))
+
+		err = conn.UpdateText(request.ID, request.Text)
+		if err != nil {
+			log.Error(err)
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("todo text updated successfully"))
+	}
+}

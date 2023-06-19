@@ -9,7 +9,6 @@ import TodoList from '@/components/todofield';
 
 import Modal from '@/components/modal';
 import { useEffect } from 'react';
-import { updateId } from '@/slices/idslice';
 import { fetchData } from '@/slices/tododataslice';
 
 export default function Page() {

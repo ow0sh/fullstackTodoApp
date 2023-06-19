@@ -4,12 +4,17 @@ import Button from './button';
 
 import { useAppDispatch } from '@/hooks';
 import { setStatus } from '@/slices/modalslice';
+import { changeType } from '@/slices/filterSlice';
 
 export default function Body() {
   const dispatch = useAppDispatch();
 
   const handlerClick = () => {
     dispatch(setStatus(true));
+  };
+
+  const handlerSwitch = (type: string) => {
+    dispatch(changeType(type));
   };
 
   return (
@@ -21,25 +26,32 @@ export default function Body() {
         bgcolor="bg-blue-700"
         textcolor="text-white"
       />
-      <Filter options={['ALL', 'Complete', 'Incomplete']} />
+      <Filter
+        options={['ALL', 'Complete', 'Incomplete']}
+        onSwitch={handlerSwitch}
+      />
     </div>
   );
 }
 
 interface FilterParams {
   options: string[];
+  onSwitch: (params: any) => any;
 }
 
-function Filter({ options }: FilterParams) {
+function Filter({ options, onSwitch }: FilterParams) {
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
   function handler() {
-    setActiveIndex((past) => {
-      if (past == 2) {
-        return 0;
-      }
-      return past + 1;
-    });
+    if (activeIndex != 2) {
+      setActiveIndex((past) => {
+        return past + 1;
+      });
+      onSwitch(options[activeIndex + 1]);
+    } else {
+      setActiveIndex(0);
+      onSwitch(options[0]);
+    }
   }
 
   return (
