@@ -1,0 +1,13 @@
+{
+  "app": {
+    "PORT": ":3001"
+  },
+  "psql": {
+    "dsn": "postgres",
+    "user": "ow0sh",
+    "password": "8989",
+    "port": 5432,
+    "host": "localhost",
+    "dbname": "todoapp"
+  }
+}
