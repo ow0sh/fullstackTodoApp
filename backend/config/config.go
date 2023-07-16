@@ -2,47 +2,37 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
-	"github.com/sirupsen/logrus"
-
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
-type TypeAppConfig struct {
-	Port string `json:"PORT"`
+type Config interface {
+	DB() *sqlx.DB
+	Log() *logrus.Logger
 }
 
-type TypePSQLConfig struct {
-	Dsn      string `json:"dsn"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Port     int    `json:"port"`
-	Host     string `json:"host"`
-	Dbname   string `json:"dbname"`
+type config struct {
+	db
+	logger
 }
 
-type TypeConfig struct {
-	App  TypeAppConfig  `json:"app"`
-	PSQL TypePSQLConfig `json:"psql"`
-}
-
-func InitConfig(log *logrus.Logger) (TypeConfig, error) {
-	configFilename := "default.json"
-	var config TypeConfig
-
-	configFile, err := ioutil.ReadFile("./config/" + configFilename)
+func NewConfig(configPath string) (Config, error) {
+	file, err := os.Open(configPath)
 	if err != nil {
-		log.Error("failed to open config file")
-		return config, errors.Wrap(err, "failed to open config file")
+		return nil, errors.Wrap(err, "failed to open config")
 	}
 
-	err = json.Unmarshal(configFile, &config)
-	if err != nil {
-		log.Error("failed to open config file")
-		return config, errors.Wrap(err, "failed to open config file")
+	cfg := config{}
+	if err = json.NewDecoder(file).Decode(&cfg); err != nil {
+		return nil, errors.Wrap(err, "failed to decode config")
 	}
 
-	log.Info("config initialized")
-	return config, nil
+	if err = cfg.validate(); err != nil {
+		return nil, errors.Wrap(err, "failde to validate config")
+	}
+
+	return &cfg, nil
 }

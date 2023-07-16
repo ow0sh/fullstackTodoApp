@@ -1,0 +1,6 @@
+{
+  "db": {
+    "URL": "postgres://postgres:8989@db/todos?sslmode=disable",
+    "Driver": "postgres"
+  }
+}

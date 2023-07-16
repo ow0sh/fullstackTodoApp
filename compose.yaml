@@ -1,0 +1,55 @@
+version: '3'
+services:
+  db:
+    image: postgres:15
+    restart: always
+    user: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=8989
+      - POSTGRES_DB=todos
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-migration:
+    build: 
+      context: ./db-migrations
+    environment:
+      - DB_URL=postgres://postgres:8989@db/todos?sslmode=disable
+      - MIGRATIONS_PATH=./migrations
+    volumes:
+      - ./config.json:/config.json
+    depends_on:
+      - db
+    restart: on-failure
+
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend/config.json:/config.json
+    ports:
+      - 3001:3001
+    depends_on:
+      - db
+
+  frontend:
+    build: 
+      context: ./frontend/fullstacktest
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend
+      - db
+
+volumes:
+  db-data:

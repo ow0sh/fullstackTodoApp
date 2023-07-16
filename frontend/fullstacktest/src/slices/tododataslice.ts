@@ -47,7 +47,7 @@ export const todoDataSlice = createSlice({
       });
 
       let tmp = state.data.slice();
-      state.data = tmp.filter((element) => element.ID != action.payload);
+      state.data = tmp.filter((element) => element.Id != action.payload);
     },
     switchStatus: (state, action: PayloadAction<number>) => {
       fetch('http://localhost:3001/api/switchstatus', {
@@ -60,7 +60,7 @@ export const todoDataSlice = createSlice({
 
       let tmp = state.data.slice();
       tmp.forEach((element) => {
-        if (element.ID == action.payload) {
+        if (element.Id == action.payload) {
           element.Status = !element.Status;
         }
       });
@@ -77,7 +77,7 @@ export const todoDataSlice = createSlice({
 
       let tmp = state.data.slice();
       tmp.forEach((element) => {
-        if (element.ID == action.payload.ID) {
+        if (element.Id == action.payload.ID) {
           element.Text = action.payload.Text;
         }
       });

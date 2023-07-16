@@ -26,7 +26,7 @@ export default function Modal() {
               addTodo({
                 Text: value,
                 Status: false,
-                ID: result + 1,
+                Id: result + 1,
               } as Todo)
             );
           };
