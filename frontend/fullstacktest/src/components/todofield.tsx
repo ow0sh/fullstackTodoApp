@@ -14,7 +14,6 @@ export default function TodoList({ todos }: TodoListParams) {
   const type = useAppSelector((state) => state.filter.type);
 
   useEffect(() => {
-    console.log(type);
     switch (type) {
       case 'ALL':
         setCopyTodos(todos);
@@ -36,7 +35,7 @@ export default function TodoList({ todos }: TodoListParams) {
     }
   }, [type, todos]);
 
-  if (!todos) {
+  if (!copyTodos || copyTodos.length == 0) {
     return (
       <div className="mt-[20px] bg-gray-200 rounded-md min-h-[80px] flex justify-center">
         <div className="bg-stone-400 text-gray-700 w-32 h-8 flex justify-center rounded-lg my-auto">
@@ -50,10 +49,10 @@ export default function TodoList({ todos }: TodoListParams) {
       {copyTodos.map((todo) => {
         return (
           <Todo
-            key={todo.ID}
+            key={todo.Id}
             Text={todo.Text}
             Status={todo.Status}
-            ID={todo.ID}
+            Id={todo.Id}
           />
         );
       })}
@@ -61,7 +60,7 @@ export default function TodoList({ todos }: TodoListParams) {
   );
 }
 
-function Todo({ Text, Status, ID }: Todo) {
+function Todo({ Text, Status, Id }: Todo) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const dispatch = useAppDispatch();
@@ -76,7 +75,7 @@ function Todo({ Text, Status, ID }: Todo) {
 
   const onKeyDownHandler = (e: KeyboardEvent) => {
     if (e.key == 'Enter' && textareaRef.current) {
-      dispatch(updateText({ ID: ID, Text: textareaRef.current.value }));
+      dispatch(updateText({ ID: Id, Text: textareaRef.current.value }));
       textareaRef.current.disabled = true;
     }
   };
@@ -88,7 +87,7 @@ function Todo({ Text, Status, ID }: Todo) {
           <div
             className="my-auto ml-2 mr-2"
             onClick={() => {
-              dispatch(switchStatus(ID));
+              dispatch(switchStatus(Id));
             }}
           >
             <Checkbox checked={Status} />
@@ -115,7 +114,7 @@ function Todo({ Text, Status, ID }: Todo) {
           <div className="w-[25px] h-[25px]">
             <svg
               onClick={() => {
-                dispatch(deletetodo(ID));
+                dispatch(deletetodo(Id));
               }}
               fill="currentColor"
               viewBox="0 0 16 16"

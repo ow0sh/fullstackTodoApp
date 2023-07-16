@@ -31,7 +31,6 @@ const Home = () => {
     const tmp = async () => {
       const responce = await fetch('http://localhost:3001/api/gettodos');
       const result = await responce.json();
-      console.log(result);
       dispatch(fetchData(result));
     };
     tmp();

@@ -1,30 +1,46 @@
 package main
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 
-	"github.com/ow0sh/fullstackgo/client"
-	"github.com/ow0sh/fullstackgo/config"
-	"github.com/ow0sh/fullstackgo/middlware"
-	"github.com/ow0sh/fullstackgo/postgres"
+	"github.com/ow0sh/fullstackTodoApp/client"
+	"github.com/ow0sh/fullstackTodoApp/config"
+	"github.com/ow0sh/fullstackTodoApp/middlware"
+	sqlx2 "github.com/ow0sh/fullstackTodoApp/repos/sqlx"
+	"github.com/ow0sh/fullstackTodoApp/usecases"
 )
 
-func main() {
-	log := logrus.New()
+const configPath = "./config.json"
 
-	config, _ := config.InitConfig(log)
+func main() {
+	config, err := config.NewConfig(configPath)
+	if err != nil {
+		panic(err)
+	}
+
+	log := config.Log()
+	db := config.DB()
+
+	ctx, cancel := ctxWithSig()
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error(err)
+			cancel()
+		}
+	}()
 
 	httpcli := &http.Client{}
 	client := client.NewClient(httpcli)
 
 	handler := NewHandler(client)
-
-	PSQLConn, _ := postgres.NewConn(&config.PSQL, log)
 
 	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
@@ -37,19 +53,36 @@ func main() {
 	}))
 	r.Use(middlware.Logger(log))
 
+	todosUse := usecases.NewTodoUseCase(sqlx2.NewTodoRepo(db))
+
 	r.Route("/api", func(r chi.Router) {
-		r.Get("/getlastid", handler.getId(PSQLConn, log))
-		r.Post("/inserttodo", handler.InsertTodo(PSQLConn, log))
-		r.Get("/gettodos", handler.GetTodos(PSQLConn, log))
-		r.Delete("/deletetodo", handler.DeleteTodo(PSQLConn, log))
-		r.Post("/switchstatus", handler.SwitchStatus(PSQLConn, log))
-		r.Post("/updatetext", handler.UpdateText(PSQLConn, log))
+		r.Get("/getlastid", handler.GetLastId(ctx, todosUse, log))
+		r.Post("/inserttodo", handler.InsertTodo(ctx, todosUse, log))
+		r.Get("/gettodos", handler.GetTodos(ctx, todosUse, log))
+		r.Delete("/deletetodo", handler.DeleteTodo(ctx, todosUse, log))
+		r.Post("/switchstatus", handler.SwitchStatus(ctx, todosUse, log))
+		r.Post("/updatetext", handler.UpdateText(ctx, todosUse, log))
 	})
 
-	if err := http.ListenAndServe(config.App.Port, r); err != nil {
+	log.Info("Server has been started")
+	if err := http.ListenAndServe(":3001", r); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
 		}
 	}
-	defer PSQLConn.CloseConn()
+}
+
+func ctxWithSig() (context.Context, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGINT)
+
+	go func() {
+		select {
+		case <-ch:
+			cancel()
+		}
+	}()
+
+	return ctx, cancel
 }

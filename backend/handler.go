@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/ow0sh/fullstackgo/client"
-	"github.com/ow0sh/fullstackgo/postgres"
+	"github.com/ow0sh/fullstackTodoApp/client"
+	"github.com/ow0sh/fullstackTodoApp/models"
+	"github.com/ow0sh/fullstackTodoApp/usecases"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,14 +20,14 @@ func NewHandler(cli *client.Client) handler {
 	return handler{httpCli: cli}
 }
 
-func (h *handler) getId(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+func (h *handler) GetLastId(ctx context.Context, todouse *usecases.TodoUseCase, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := conn.SelectLastId()
+		todo, err := todouse.GetLastTodo(ctx)
 		if err != nil {
 			log.Error(err)
 		}
 
-		jsonData, err := json.Marshal(id)
+		jsonData, err := json.Marshal(todo.Id + 1)
 		if err != nil {
 			log.Error("Failed to marshal id, err: " + fmt.Sprint(err))
 		}
@@ -35,12 +37,11 @@ func (h *handler) getId(conn *postgres.PSQLConn, log *logrus.Logger) func(w http
 	}
 }
 
-func (h *handler) GetTodos(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+func (h *handler) GetTodos(ctx context.Context, todouse *usecases.TodoUseCase, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		todos, err := conn.SelectTodos()
+		todos, err := todouse.SelectTodos(ctx)
 		if err != nil {
 			log.Error("Failed to select todos, err: " + fmt.Sprint(err))
-
 		}
 
 		jsonData, err := json.Marshal(todos)
@@ -53,9 +54,9 @@ func (h *handler) GetTodos(conn *postgres.PSQLConn, log *logrus.Logger) func(w h
 	}
 }
 
-func (h *handler) InsertTodo(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+func (h *handler) InsertTodo(ctx context.Context, todouse *usecases.TodoUseCase, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var todo postgres.Todo
+		var todo models.Todo
 		err := json.NewDecoder(r.Body).Decode(&todo)
 		if err != nil {
 			log.Error(err)
@@ -63,18 +64,19 @@ func (h *handler) InsertTodo(conn *postgres.PSQLConn, log *logrus.Logger) func(w
 			return
 		}
 
-		log.Info(fmt.Sprintf("Data recieved: id=%v, text=%v, status=%v", todo.ID, todo.Text, todo.Status))
+		log.Info(fmt.Sprintf("Data recieved:text=%v, status=%v", todo.Text, todo.Status))
 
-		conn.InsertTodo(todo)
+		todouse.CreateTodo(ctx, todo)
 
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("todo inserted successfully"))
 	}
 }
 
-func (h *handler) DeleteTodo(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+func (h *handler) DeleteTodo(ctx context.Context, todouse *usecases.TodoUseCase, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var id int
+		log.Info(r.Body)
 		err := json.NewDecoder(r.Body).Decode(&id)
 		if err != nil {
 			log.Error(err)
@@ -84,14 +86,17 @@ func (h *handler) DeleteTodo(conn *postgres.PSQLConn, log *logrus.Logger) func(w
 
 		log.Info(fmt.Sprintf("ID to delete recieved: id=%v", id))
 
-		conn.DeleteTodo(id)
+		_, err = todouse.DeleteTodo(ctx, int64(id))
+		if err != nil {
+			log.Error("failed to delete todo, err: " + fmt.Sprint(err))
+		}
 
 		w.WriteHeader(http.StatusAccepted)
 		w.Write([]byte("todo deleted successfully"))
 	}
 }
 
-func (h *handler) SwitchStatus(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+func (h *handler) SwitchStatus(ctx context.Context, todouse *usecases.TodoUseCase, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var id int
 		err := json.NewDecoder(r.Body).Decode(&id)
@@ -103,7 +108,12 @@ func (h *handler) SwitchStatus(conn *postgres.PSQLConn, log *logrus.Logger) func
 
 		log.Info(fmt.Sprintf("ID to switch recieved: id=%v", id))
 
-		err = conn.SwitchStatus(id)
+		todo, err := todouse.GetTodoViaId(ctx, int64(id))
+		if err != nil {
+			log.Error(err)
+		}
+
+		_, err = todouse.SwitchStatus(ctx, !todo.Status, int64(id))
 		if err != nil {
 			log.Error(err)
 		}
@@ -113,14 +123,9 @@ func (h *handler) SwitchStatus(conn *postgres.PSQLConn, log *logrus.Logger) func
 	}
 }
 
-type UpdateTextRequest struct {
-	ID   int
-	Text string
-}
-
-func (h *handler) UpdateText(conn *postgres.PSQLConn, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
+func (h *handler) UpdateText(ctx context.Context, todouse *usecases.TodoUseCase, log *logrus.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var request UpdateTextRequest
+		var request models.UpdateTextRequest
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
 			log.Error(err)
@@ -130,7 +135,7 @@ func (h *handler) UpdateText(conn *postgres.PSQLConn, log *logrus.Logger) func(w
 
 		log.Info(fmt.Sprintf("ID and text to updatetext recieved: id=%v", request.ID))
 
-		err = conn.UpdateText(request.ID, request.Text)
+		_, err = todouse.UpdateTodo(ctx, request.Text, int64(request.ID))
 		if err != nil {
 			log.Error(err)
 		}
