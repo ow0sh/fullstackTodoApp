@@ -106,7 +106,7 @@ function Todo({ Text, Status, Id }: Todo) {
               defaultValue={Text}
               ref={textareaRef}
               disabled={true}
-              className="my-auto resize-none h-5 overflow-hidden outline-none"
+              className="my-auto resize-none h-5 overflow-y-hidden outline-none"
             />
           )}
         </div>
